@@ -32,28 +32,24 @@ class Environment :
         y_idx = list(range(self.grid_size))
 
         # randomly scatter my agents in the grid
-        id = 0
+        agent_id = 0
         for agent in range(self.num_agents) :
             x, y = random.choice(x_idx), random.choice(y_idx)
             x_idx.remove(x)
             y_idx.remove(y)
             agent = Agent([x, y], id)
-            self.add_agents(agent)
-            id+=1
-    
-
-    def add_agents(self, agent):
-        self.agents.append(agent) # adds the agent to the environement  
+            self.agents.append(agent) # add the agent to the list of agents with pos (x,y) and id = agent_id
+            agent_id+=1
 
     def update_env(self):
         '''
         this function updates the environement following a policy. 
-        
         !!! needs work :=)
-
         '''
-        return 
+        
 
+
+        return 
 
 class Visualization :
 
@@ -81,6 +77,30 @@ class Visualization :
     def run(self):
         ani = animation.FuncAnimation(self.fig, self.update, interval=50)
         plt.show()
+
+
+class MARL : 
+    '''
+    our system's training class
+    '''
+    def __init__(self, env) :
+        self.env = env # we initialize our environment (methods : )
+        
+    
+    
+        
+        
+
+
+
+
+
+
+
+
+
+
+
 
 
 
