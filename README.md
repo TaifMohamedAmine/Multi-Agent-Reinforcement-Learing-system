@@ -1,2 +1,2 @@
-# Multi-Agent-Reinforcement-Learing-system
+# Multi-Agent-Reinforcement-Learning-system
 work in progress :=)
