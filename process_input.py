@@ -1,7 +1,4 @@
-import matplotlib.pyplot as plt
-import numpy as np
 import cv2
-import random
 
 '''
 what we want to do in this code is : 
@@ -31,6 +28,13 @@ class Input :
         # we define what are the rewards and sanctions in our environement
         self.reward = reward
         self.sanction = sanction
+
+        # we can calculate the number of black pixels so we can make it our number of agents
+        self.num_agents = 0
+        for row in self.img : 
+            self.num_agents += row.count(0)
+
+
         
 
     
@@ -47,9 +51,10 @@ class Input :
 
 
 
+# we test the class 
 
-
-
+test = Input("projet pfa/star.png", 100, -99)
+print(test.num_agents) # prints the number of black pixels in the input image
 
 
 
