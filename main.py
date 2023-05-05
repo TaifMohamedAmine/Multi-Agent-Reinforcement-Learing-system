@@ -3,6 +3,19 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import random
 
+'''
+Notes for this project : 
+
+    - pfa objective : create a system where my agents form themselves in the shape of the requested shape by the user, with the minimum energy possible
+
+        * think of where i should simulate my system and my agents
+        
+        
+        * think of the environement of the agents, how they move, communicate and interact. 
+        * think of a loss function to test if we acheived the shape we want them to form
+        * test different optimizers for my loss function
+
+'''
 
 class Agent:
     '''
@@ -46,9 +59,6 @@ class Environment :
         this function updates the environement following a policy. 
         !!! needs work :=)
         '''
-        
-
-
         return 
 
 class Visualization :
@@ -89,20 +99,6 @@ class MARL :
     
     
         
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 if __name__ == '__main__':
     
