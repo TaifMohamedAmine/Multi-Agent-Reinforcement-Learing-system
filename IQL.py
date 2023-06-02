@@ -198,40 +198,49 @@ class IQL :
         a function that updates the states of agents with no exploration
         """
 
+        #print(f"this method is ran in frame {i}")
+
         agent_idx = 0 
 
         x, y = [], []
 
         for agent in self.env.agents : 
+                
+            if not agent.reached_end_state :
 
-            # this agent's Q matrix :
-            agent_Q_matrix = self.Q_matrices_list[agent_idx][1]
+                # this agent's Q matrix :
+                agent_Q_matrix = self.Q_matrices_list[agent_idx][1]
 
-            # Let's get the agents current state
-            curr_state = agent.pos
-            curr_state_idx = self.convert_state_idx(curr_state)
+                # Let's get the agents current state
+                curr_state = agent.pos
+                curr_state_idx = self.convert_state_idx(curr_state)
 
-            
+                # get the propriate action with no exploration : 
+                action = self.eps_greedy_policy(agent_Q_matrix, curr_state_idx, 0)
 
-            # get the propriate action with no exploration : 
-            action = self.eps_greedy_policy(agent_Q_matrix, curr_state_idx, 0)
+                print(agent_Q_matrix[curr_state_idx], action)
 
-            # update the action and positon of the agent 
-            agent.action = action
-            agent.reached_end_state = self.env.reward_list[agent.pos[0]][agent.pos[1]][1]
-            
-            agent.next_state = [a + b for a, b in zip(agent.pos, agent.action)]
+                # update the action and positon of the agent 
+                agent.action = action
+                
+                
+                agent.next_state = [a + b for a, b in zip(agent.pos, agent.action)]
 
-            if self.check_invalid_index(agent.next_state):
-                agent.next_state = agent.pos 
+                if self.check_invalid_index(agent.next_state):
+                    agent.next_state = agent.pos 
 
+                agent.reached_end_state = self.env.reward_list[agent.next_state[0]][agent.next_state[1]][1]
 
-            x.append(agent.pos[0])
-            y.append(agent.pos[1])
+                x.append(agent.next_state[0])
+                y.append(agent.next_state[1])
 
-            agent_idx +=1
+                agent.move()
 
-            agent.move()
+            else : 
+                x.append(agent.pos[0])
+                y.append(agent.pos[1])
+
+            agent_idx += 1 
 
         self.scat.set_offsets(np.c_[x, y])
         
@@ -269,7 +278,7 @@ class IQL :
         
         self.env.reset_env()
 
-        animation = FuncAnimation(self.fig, self.update_agents, frames = max_mov, interval = 50, blit = True)
+        animation = FuncAnimation(self.fig, self.update_agents, frames = max_mov, interval = 200, blit = True)
         plt.show()
 
 
