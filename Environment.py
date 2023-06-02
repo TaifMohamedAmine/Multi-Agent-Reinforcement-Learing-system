@@ -25,24 +25,11 @@ class Environment :
         self.agents = [] 
         
         # Let's instanciate our image processing class  : 
-        input_instance = Input(image_path, reward=100, sanction=-1)
+        input_instance = Input(image_path, reward=1000, sanction=-0.1, intermediate=10)
 
         # we extract the reward list from the image we processed 
         self.reward_list = input_instance.reward_grid()
 
-        #print(self.reward_list)
-
-        #return 
-
-        '''reward_count = 0
-        for item in self.reward_list : 
-            for subitem in item : 
-                if subitem[1]: 
-                    reward_count +=1 
-
-        print(reward_count)
-        return'''
-    
         # randomly scatter my agents in the grid
         iter_list = list(range(self.grid_length))
         comb = itertools.permutations(iter_list, 2) 
@@ -90,7 +77,9 @@ class Environment :
             comb_list.remove(position)
             agent.pos = position # the agent's position is initialized to a random positin
             agent.action = [0, 0]
+            agent.next_state = 0
             agent.reached_end_state = False
+
 
 
 

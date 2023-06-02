@@ -59,7 +59,10 @@ class IQL :
         self.ax.set_xlim(0, self.env.grid_length) 
         self.ax.set_ylim(0, self.env.grid_width)
 
-        
+        # the positions to be displayed :
+        self.X, self.Y = [], []
+
+
     
     def convert_state_idx(self, state):
         """
@@ -80,13 +83,34 @@ class IQL :
     def check_invalid_index(self, state):
         """
         this method adds a big penalty if an updated state is out of our grid
+        
+        we have to make a distinction where, the agent in the corners of the grid where i should exclude two action
+        
+        maybe return the actions that i should exclude ??
         """
-        x, y = state[0], state[1]
+
+        x, y = state[0], state[1]   
         
-        if (x >= self.env.grid_length or x < 0) or (y >= self.env.grid_width or y < 0) : 
-            return True 
-        return False
+        #result_bool = [False, False]
+
+        actions_to_exclude = []
+
+        # check the x boundaries
+        if x == self.env.grid_length - 1 :
+            actions_to_exclude.append([1, 0])
+
+        if x == 0 : 
+            actions_to_exclude.append([-1, 0])
+
+        # check the y boundaries
+        if y == self.env.grid_width - 1 : 
+            actions_to_exclude.append([0, 1])
         
+        if y == 0 : 
+            actions_to_exclude.append([0, -1])
+        
+        return actions_to_exclude
+
 
 
     def eps_greedy_policy(self, Q_matrix , state, exploration):
@@ -99,7 +123,7 @@ class IQL :
 
         else : 
             action_idx = np.argmax(Q_matrix[state])
-            action = self.action_list[action_idx]
+            action = self.action_list[action_idx] 
 
         return action
     
@@ -137,61 +161,93 @@ class IQL :
                         curr_state_idx = self.convert_state_idx(current_state)
                         
                         # now we select and action using an epsilon greedy policy
-                        action = self.eps_greedy_policy(agent_Q_matrix, curr_state_idx, self.lr)
+                        action = self.eps_greedy_policy(agent_Q_matrix, curr_state_idx, self.eps)
                         
-                        # update the agent's action and state :
-                        agent.action = action
+                        # we check the actions that agent cant do :
+                        actions_to_remove = self.check_invalid_index(current_state)
 
-                        # we now need to update the Q table
-                        curr_state_idx, action_idx = self.convert_state_idx(current_state) ,self.convert_action_idx(action)
+                        if action in actions_to_remove : 
+                            
+                            reward = -100 # we give a big sanction if the agent is out of bounds
 
-                        old_Q_value = agent_Q_matrix[curr_state_idx][action_idx]
+                            # actions that wont take us out of bounds
+                            tmp_actions = self.action_list[:]
+                            for item in actions_to_remove : 
+                                tmp_actions.remove(item)
+                            
+                            """# the agent take a random choice from the actions he is presented (can be improved ila khdinaha mn Q table)
+                            agent.action = random.choice(tmp_actions)
+                            """
+                            
+                            # we select the action with the biggest Q value from the actions we can do
+                            action_idx_list = [self.action_list.index(item) for item in tmp_actions]
+                            tmp_Q_matrix = self.Q_matrices_list[agent_itr][1][:,action_idx_list]
+
+                            action_id = np.argmax(tmp_Q_matrix[curr_state_idx])
+                            agent.action = tmp_actions[action_id]
+
+                            # we now need to update the Q table
+                            curr_state_idx, action_idx = self.convert_state_idx(agent.pos) ,self.convert_action_idx(agent.action)
+
+                            # out old Q value : 
+                            old_Q_value = agent_Q_matrix[curr_state_idx][action_idx]
+
+                            agent.next_state = [x + y for x, y in zip(agent.pos, agent.action)]
+
+                            agent.reached_end_state = self.env.reward_list[agent.next_state[0]][agent.next_state[1]][1]
+
+                            Best_new_state_Q = max(agent_Q_matrix[self.convert_state_idx(agent.next_state)])
                         
-                        agent.next_state = [x + y for x, y in zip(agent.pos, agent.action)]
-
-                        new_state = agent.next_state
-
-                        #print(agent.pos, agent.action , agent.next_state)
-
-
-                        if self.check_invalid_index(new_state): 
+                            self.Q_matrices_list[agent_itr][1][curr_state_idx][action_idx] = (1 - self.lr) * old_Q_value + self.lr*(reward + 
+                                                                                                        self.discount_rate * Best_new_state_Q)
                             
-                            reward = -100 # big penalty if the agent goes out of bounds
+
+                        else : 
                             
-                            Best_new_state_Q
+                            # we keep the same action
+                            agent.action = action
+
+                            # we get the indexes of pos and action in Q table 
+                            curr_state_idx, action_idx = self.convert_state_idx(agent.pos) ,self.convert_action_idx(agent.action)
+
+                            # out old Q value : 
+                            old_Q_value = agent_Q_matrix[curr_state_idx][action_idx]
+
+                            # we calculate the new state : 
+                            agent.next_state = [x + y for x, y in zip(agent.pos, agent.action)]
+                            
+                            reward_values = self.env.reward_list[agent.next_state[0]][agent.next_state[1]]
+
+                            reward , agent.reached_end_state = reward_values[0], reward_values[1]
+
+                            # the best Q value in the next state
+                            Best_new_state_Q = max(agent_Q_matrix[self.convert_state_idx(agent.next_state)])
+                            
 
                             self.Q_matrices_list[agent_itr][1][curr_state_idx][action_idx] = (1 - self.lr) * old_Q_value + self.lr*(reward + 
                                                                                                         self.discount_rate * Best_new_state_Q)
+                            
+                            
+                            if reward > 10000 :
+                                print(self.Q_matrices_list[agent_itr][1][curr_state_idx][action_idx])
 
 
-
-                        else :
-                            new_move_updates = self.env.reward_list[new_state[0]][new_state[1]]# the reward of the new state
-                        
-                            reward, agent.reached_end_state = new_move_updates[0], new_move_updates[1]
-
-                            """if agent.reached_end_state : 
-                                print("this agent reached an end state")"""
-
-
-                            Best_new_state_Q = max(agent_Q_matrix[self.convert_state_idx(new_state)])
-
-                            self.Q_matrices_list[agent_itr][1][curr_state_idx][action_idx] = (1 - self.lr) * old_Q_value + self.lr*(reward + 
-                                                                                                        self.discount_rate * Best_new_state_Q)
-
-                                
-                            #print(self.Q_matrices_list[agent_itr][1][curr_state_idx])
-                            # the agent excecutes the action and updates to new state 
-                            agent.move()
+                        # the agent excecutes the action and updates to new state 
+                        agent.move()
                     
                     agent_itr += 1
             
             self.env.check_target()
 
             # we need to decay the exploration rate (self.eps) by 1 / max_iter
-            self.eps = self.eps * ((self.max_iter - episode) / self.max_iter)
+            #self.eps = self.eps * ((self.max_iter - episode) / self.max_iter)
+            
+
+        print("training finished successfully")
 
         return self.Q_matrices_list
+    
+
 
     def update_agents(self, i):
         """
@@ -202,7 +258,9 @@ class IQL :
 
         agent_idx = 0 
 
-        x, y = [], []
+        self.X , self.Y = [], []
+
+        #print(self.env.agents[0].pos)
 
         for agent in self.env.agents : 
                 
@@ -215,60 +273,68 @@ class IQL :
                 curr_state = agent.pos
                 curr_state_idx = self.convert_state_idx(curr_state)
 
+                #print(f" for agent {agent_idx} we have {agent_Q_matrix[curr_state_idx]}")
+
                 # get the propriate action with no exploration : 
                 action = self.eps_greedy_policy(agent_Q_matrix, curr_state_idx, 0)
+                
+                # we check the actions that agent cant do :
+                actions_to_remove = self.check_invalid_index(curr_state)
 
-                print(agent_Q_matrix[curr_state_idx], action)
+                #print(f"for agent {agent_idx} we have pos : {agent.pos} and {actions_to_remove}")
 
-                # update the action and positon of the agent 
-                agent.action = action
+                if action in actions_to_remove : 
+                
+                    # actions that wont take us out of bounds
+                    tmp_actions = self.action_list[:]
+                    for item in actions_to_remove : 
+                        tmp_actions.remove(item)
+                    
+                    # the agent take a random choice from the actions he is presented (can be improved ila khdinaha mn Q table)
+                    action_idx_list = [self.action_list.index(item) for item in tmp_actions]
+                    tmp_Q_matrix = self.Q_matrices_list[agent_idx][1][:,action_idx_list]
+
+                    
+
+                    action_id = np.argmax(tmp_Q_matrix[curr_state_idx])
+                    agent.action = tmp_actions[action_id]
+
+                    agent.next_state = [x + y for x, y in zip(agent.pos, agent.action)]
+
+                    agent.reached_end_state = self.env.reward_list[agent.next_state[0]][agent.next_state[1]][1]
+                
+                else : 
+
+                    # we continue with the chosen action
+                    agent.action = action 
+
+                    agent.next_state = [x + y for x, y in zip(agent.pos, agent.action)]
+
+                    agent.reached_end_state = self.env.reward_list[agent.next_state[0]][agent.next_state[1]][1]
                 
                 
-                agent.next_state = [a + b for a, b in zip(agent.pos, agent.action)]
+                # for updatting the plot : 
+                self.X.append(agent.next_state[0])
+                self.Y.append(agent.next_state[1])
 
-                if self.check_invalid_index(agent.next_state):
-                    agent.next_state = agent.pos 
-
-                agent.reached_end_state = self.env.reward_list[agent.next_state[0]][agent.next_state[1]][1]
-
-                x.append(agent.next_state[0])
-                y.append(agent.next_state[1])
-
+                # update the agent position with the new state 
                 agent.move()
-
+            
             else : 
-                x.append(agent.pos[0])
-                y.append(agent.pos[1])
+                # for updatting the plot : 
+                self.X.append(agent.pos[0])
+                self.Y.append(agent.pos[1])
+
 
             agent_idx += 1 
 
-        self.scat.set_offsets(np.c_[x, y])
+        test = np.c_[self.X, self.Y]
+
+        #test = np.stack([self.X, self.Y]).T
+        
+        self.scat.set_offsets(offsets=test)
         
         return self.scat, 
-
-
-
-    def simulate(self, max_mov):
-        """
-        this method is to simulate the trained and final Q tables
-        """  
-        # reset the env in each ep for agents to test multiple  :
-        self.env.reset_env()
-
-        # we create a list to check if all agents have reached the target pixels
-        reached_target = [agent.reached_end_state for agent in self.env.agents]
-
-        itr = 0
-        
-        # in each episode, the agent updates its position one time, we repeat until all the agents reach a target pixel
-        while( (not all(reached_target)) and itr < max_mov) :      
-            
-            self.update_agents()
-            
-            # update the the bool list
-            reached_target = [agent.reached_end_state for agent in self.env.agents]
-            itr += 1
-
         
     def main(self, max_mov):
         """
@@ -278,7 +344,7 @@ class IQL :
         
         self.env.reset_env()
 
-        animation = FuncAnimation(self.fig, self.update_agents, frames = max_mov, interval = 200, blit = True)
+        animation = FuncAnimation(self.fig, self.update_agents, frames = max_mov, interval = 200)
         plt.show()
 
 
