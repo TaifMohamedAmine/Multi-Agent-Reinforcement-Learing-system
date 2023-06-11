@@ -1,9 +1,6 @@
-
-
 """
 In this file we implement the Agent class with all its attributes
 """
-
 
 class Agent:
     '''
@@ -11,10 +8,10 @@ class Agent:
     '''
     def __init__(self, pos):
         self.pos = pos # initial pos of the agent
-        self.radius = 0.00001  # radius of the agent body in the env
         self.reached_end_state = False # a boolean to check if the agent reached an end state
         self.action = [0, 0] # initial action is to stay at place
         self.next_state = 0 # the updated position ~ the next state
+        self.X, self.Y = 0, 0 # a list of x and y for viualization
 
     def move(self):
         """

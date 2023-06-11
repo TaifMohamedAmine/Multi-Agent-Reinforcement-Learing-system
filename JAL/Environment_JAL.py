@@ -4,7 +4,7 @@ from Agent import Agent
 from process_input_JAL import Input
 
 """
-In this file we implement the environment of our game
+In this file we implement the environment of our joint action game
 """
 
 class Environment :
@@ -23,7 +23,7 @@ class Environment :
         self.agents = [] 
         
         # Let's instanciate our image processing class  : 
-        input_instance = Input(image_path, reward=100, sanction=-10, intermediate=10, extra_padding=extra_padding)
+        input_instance = Input(image_path, reward=100, sanction=-50, intermediate=10, extra_padding=extra_padding) # i need to add the rewards as parameters to env.
 
         # we extract the reward list from the image we processed 
         self.reward_list = input_instance.rewards
@@ -38,38 +38,42 @@ class Environment :
 
         # randomly scatter my agents in the grid
         iter_list = list(range(self.grid_length))
-        comb = itertools.permutations(iter_list, 2) 
-        comb_list = [list(item) for item in comb if list(item) not in self.target_pos] # all possible int positions in our grid     
+        comb = itertools.product(iter_list, repeat=2) 
+        comb_list = [list(item) for item in comb if list(item) not in self.target_pos] # all possible int positions in our grid without target positions
 
-        
         for i in range(self.num_agents) :
             position = random.choice(comb_list)
             comb_list.remove(position)
             agent = Agent(position)
-            self.agents.append(agent) # add the agent to the list of agents with pos (x,y) and id = agent_id
+            self.agents.append(agent) # add the agent to the list of agents with pos (x,y) 
+
+        # we create sub lists of agents for each sub grid : 
+        self.sub_agents = []
+        for i in range(0, self.num_agents, 5):
+            self.sub_agents.append(self.agents[i:i+5])
 
 
         # Let's define our actions :
         self.actions = {
-
             'UP':[0, 1], # increase y by 1
             'DOWN':[0, -1], # decrease y by 1
             'RIGHT':[1, 0], # increase x by 1
             'LEFT':[-1, 0],# decrease x by 1
             'STOP':[0, 0] # stay still in same place
-
         } 
 
         self.reached_targets = all([agent.reached_end_state for agent in self.agents])
 
+        # a list of sub grids of our initial image
+        self.image_grids = input_instance.sub_grids
 
     def reset_env(self):
         """
         this method is important in IQL algo, in order to explore all different initiale states
         """
         iter_list = list(range(self.grid_length))
-        comb = itertools.permutations(iter_list, 2) 
-        comb_list = [list(item) for item in comb if list(item) not in self.target_pos] # all possible int positions in our grid    
+        comb = itertools.product(iter_list, repeat=2) 
+        comb_list = [list(item) for item in comb if list(item) not in self.target_pos] # all possible int positions in our grid without target positions
 
         for agent in self.agents :
             position = random.choice(comb_list)
@@ -80,22 +84,10 @@ class Environment :
             agent.reached_end_state = False
 
 
-
-
     def update_env(self):
         '''
-        this function updates the environement following a policy. 
+        this function updates the positions of the agents. 
         '''
         for agent in self.agents : 
             if not agent.reached_end_state :
                 agent.move()
-
-
-    def check_target(self):
-        tst_var= 0
-        for agent in self.agents : 
-            if agent.reached_end_state : 
-                tst_var += 1 
-        
-        print(f"{tst_var} reached target out of {self.num_agents}")
-        

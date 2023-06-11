@@ -4,16 +4,12 @@ import random
 from matplotlib.animation import FuncAnimation 
 import itertools
 
-
-
-
 """
 in this file we will be trying to implement the Joint action learners MARL algorithm
 
 Notes : 
         - the reward system is now centralized 
         - we add a contribution factor in the Q update rule
-
 
 """
 
@@ -47,10 +43,6 @@ class JointActionLearning :
         # a list of our actions :
         self.action_list = list(self.actions.values())
 
-        """# initialize the Q matrix to 0
-        q_matrix_shape = tuple([self.num_states] + [len(self.actions)] * self.env.num_agents)
-        self.Q_matrix = np.zeros(q_matrix_shape)    
-        print(self.Q_matrix.shape) """
 
         # joint action space size :
         self.num_joint_actions = self.env.num_agents ** self.env.num_agents
@@ -61,7 +53,7 @@ class JointActionLearning :
         # initiate the Q matrix of the size (num states , num of joint actions)
         self.Q_matrix = np.zeros(shape=(self.num_states, (self.num_joint_actions)))
         #print("the size of the Q matrix: (num_states, num_agents ** num_agents) ==>", self.Q_matrix.shape)
-
+        
         # visualization stuff 
         self.fig, self.ax = plt.subplots()
         self.scat = self.ax.scatter([], []) # empty figure at first
@@ -71,13 +63,11 @@ class JointActionLearning :
         # the positions to be displayed :
         self.X, self.Y = [], []
 
-        
 
 
     def encode_joint_actions(self,joint_actions):
         """
-        we encode our joint actions into indexes using an algorithm 
-
+        we encode our joint actions into indexes : (action1, action2, action3, ... ,actionn ) ==> unique Index
         """
         # we create a list of our action indexes : 
         action_idx = list(range(len(self.action_list)))
@@ -94,7 +84,7 @@ class JointActionLearning :
     
     def decode_index(self, index):
         """
-        this function is to decode an index of the Q table to get the correponding joint actions 
+        this function is to decode a column index of the Q table to the correponding joint actions : Idx ==> (a1, a2, a3, ..., an)
         """
         # we create a list of our action indexes : 
         action_idx = list(range(len(self.action_list)))
@@ -111,16 +101,17 @@ class JointActionLearning :
                 index //= n        
 
         return joint_actions
+    
         
     def convert_state_idx(self, state):
         """
-        its a method we need to convert a position state to a table index
+        its a method we need to convert a position state to a table index : (x, y) ==> idx
         """
         return state[0]*self.env.grid_length + state[1]
 
     def convert_action_idx(self, action):
         """
-        a method to get the index of the action in order to access the Q tabel
+        a method to get the index of the action in order to access the Q tabel : idx ==> (x, y) 
         """
         index = self.action_list.index(action)
         return index
@@ -128,7 +119,7 @@ class JointActionLearning :
     
     def filter_joint_actions(self , state): # clear
         """
-        remove the joint actions that would result into at least one of the agents going out of bounds
+        remaves the joints action where at least one action of the joint action results into an agent getting out the environment bounds 
         """
         if state == 1 : 
             list_states = [agent.pos for agent in self.env.agents]
@@ -159,14 +150,10 @@ class JointActionLearning :
     
     def check_invalid_index(self, state):
         """
-        this method adds a big penalty if an updated state is out of our grid
-        
-        we have to make a distinction where, the agent in the corners of the grid where i should exclude two action
-        
-        maybe return the actions that i should exclude ??
+        this method returns the set of actions to exclude from the the current state. In order to avoid getting out of bounds of the grid
         """
+
         x, y = state[0], state[1]   
-        
 
         actions_to_exclude = []
 
@@ -189,17 +176,17 @@ class JointActionLearning :
     
     def eps_greedy_policy(self, Q_matrix , list_states , exploration, available_positions):
         """
-        this method is to select an action using the q matrix and an exploration proba
+        this method is to select a joint action using the q matrix and an exploration probability epsilon
         """
         tmp_Q_matrix = Q_matrix[list_states]
-        mean_Q = np.mean(tmp_Q_matrix, axis=0)   # mochkil kayn f argmax
+        max_Q = np.max(tmp_Q_matrix, axis=1) 
 
         if np.random.uniform() < exploration : 
             joint_action = random.choice(available_positions) 
         else :
             # now we select the best joint action over all states
-            joint_action = np.argmax(mean_Q)
-            """if len(mean_Q) < self.num_joint_actions : """
+            state_joint_action = np.argmax(max_Q)
+            joint_action = np.argmax(tmp_Q_matrix[state_joint_action])
             joint_action = available_positions[joint_action]
 
         # now we convert the joint action index to actions
@@ -212,8 +199,9 @@ class JointActionLearning :
     def train(self):
         """
         this method is to train our Q matrix:
-        """
 
+        change : we need to apply this function to all the sub grids we divided our image into. (generalizing this code on the full image)
+        """
         for episode in range(self.max_iter):
 
             print(f"*************episode{episode}*************")
@@ -251,27 +239,27 @@ class JointActionLearning :
 
                 # we need to calculate the contribution factor for each future state : 
                 possible_futur_joint_action_idx = self.filter_joint_actions(0)
-                
-                tmp_Q = self.Q_matrix[:, possible_futur_joint_action_idx]
-                new_state_Q_mean = np.mean(tmp_Q[new_state_idx_list], axis=0)
-                best_next_joint_action= np.argmax(new_state_Q_mean)
-                
-
-                new_O_values = [self.Q_matrix[state][best_next_joint_action] for state in new_state_idx_list]
+            
+                # we select the best joint action for each state 
+                best_next_Q = [max(self.Q_matrix[:, possible_futur_joint_action_idx][state]) for state in new_state_idx_list]
 
                 # we now can calculate the new Q value : 
                 agent_idx = 0 
                 for agent in self.env.agents : 
-                    agent.reached_end_state = rewards[agent_idx][1]
-                    self.Q_matrix[list_states[agent_idx], best_joint_action] = (1 - self.lr) * old_Q_values[agent_idx] + self.lr * (rewards[agent_idx][0] + self.discount_factor * new_O_values[agent_idx])
+                    if not agent.reached_end_state :
+                        agent.reached_end_state = rewards[agent_idx][1]
+                        # we update the Q value for each agent 
+                        self.Q_matrix[list_states[agent_idx], best_joint_action] = (1 - self.lr) * old_Q_values[agent_idx] + self.lr * (rewards[agent_idx][0] + self.discount_factor * best_next_Q[agent_idx])
                     agent_idx += 1
                     
 
                 # we update the environment with the new positions 
                 self.env.update_env()
 
-            #self.env.check_target() # check how many agent reached a target pixel
-            self.exploration_ratio = self.exploration_ratio * ((self.max_iter - episode) / self.max_iter)
+            # we can reduce the exploration proba where exploring the depth
+            #self.exploration_ratio = self.exploration_ratio * ((self.max_iter - episode) / self.max_iter)
+        
+        return self.Q_matrix
 
 
         
@@ -295,21 +283,23 @@ class JointActionLearning :
         # update actions : 
         agent_idx = 0
         for agent in self.env.agents: 
-            agent.action = actions[agent_idx]
-            agent.next_state = [x + y for x, y in zip(agent.pos, agent.action)]
-            
-            self.X.append(agent.next_state[0])
-            self.Y.append(agent.next_state[1])
+            if not agent.reached_end_state :
+                agent.action = actions[agent_idx]
+                agent.next_state = [x + y for x, y in zip(agent.pos, agent.action)]
+                agent.reached_end_state = self.env.reward_list[agent.next_state[0]][agent.next_state[1]][1]
+                self.X.append(agent.next_state[0])
+                self.Y.append(agent.next_state[1])   
+                agent.move() 
+            else :
+                self.X.append(agent.pos[0])
+                self.Y.append(agent.pos[1])  
+
             agent_idx += 1 
         
-        self.env.update_env()
-
+        #self.env.update_env()
         test = np.c_[self.X, self.Y]
-
         #test = np.stack([self.X, self.Y]).T
-        
         self.scat.set_offsets(offsets=test)
-        
         return self.scat, 
 
 
@@ -317,17 +307,19 @@ class JointActionLearning :
         """
         Our main function (training & simualation)
         """
-    
+        # we train our Q matrix 
         self.train()
+        
+        # we reset our environment for simulation
         self.env.reset_env()
 
         # i need to iterate over all the frames
-    
+        animation = FuncAnimation(self.fig, self.update_agents, frames = max_mov, interval = 100)
 
-
-        animation = FuncAnimation(self.fig, self.update_agents, frames = max_mov, interval = 500)
+        #Save the animation frames as individual images
+        animation.save("animation.gif", writer='pillow', fps=10)
         plt.show()
-
+        
 
 
 

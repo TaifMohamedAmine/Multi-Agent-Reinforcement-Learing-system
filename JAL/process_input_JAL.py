@@ -1,4 +1,3 @@
-import cv2
 from PIL import Image
 import numpy as np
 
@@ -27,16 +26,15 @@ class Input :
         self.inter = intermediate 
 
         # param if we want to add and extra layer of padding : 
-        self.extra_padding = extra_padding
+        
+        self.extra_padding = extra_padding # this boolean is for adding an extra pooling layer of grey
 
         self.image = self.pad_black_pixels()
-        #self.image.show()
 
         self.rewards = self.reward_grid()
 
         self.num_image = np.array(self.rewards)
         self.sub_grids = [self.num_image[x:x+5,y:y+5].tolist() for x in range(0,self.num_image.shape[0],5) for y in range(0,self.num_image.shape[1],5)]         
-        
         
     
     def pad_black_pixels(self, grey_value = 180, padding_size = 1):
@@ -84,7 +82,7 @@ class Input :
 
     def reward_grid(self):
         '''
-            If the agent is in a target black pixel, it gets rewarded. If its in a white pixel, the agents gets sanctionned. 
+            If the agent moves to a target black pixel, it gets rewarded. If it moves to a white pixel, the agents gets sanctionned. 
         '''
         
         reward_list = []
@@ -107,12 +105,4 @@ class Input :
 
             reward_list.append(row)
 
-        #print(reward_list)
-
         return reward_list       
-
-
-
-
-if __name__ == '__main__':
-    i = Input("/home/amine/Desktop/VS CODE /Projet pfa/images/hello_1.png")
