@@ -1,6 +1,6 @@
 # Multi-Agent Reinforcement Learning System
 
-This repository contains an implementation of the Independent Q Learning (IQL) and Joint Action Learning (JAL) and the Value Iteration (VI) algorithms. These algorithms are used in a project where agents are trained to form a given shape based on an input image.
+This repository contains an implementation of the Independent Q Learning (IQL) and Joint Action Learning (JAL). These algorithms are used in a project where agents are trained to form a given shape based on an input image.
 
 ## Project Overview
 
