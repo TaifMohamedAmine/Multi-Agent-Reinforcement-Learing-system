@@ -38,8 +38,7 @@ class Input :
         self.extra_padding = extra_padding
 
         self.image = self.pad_black_pixels()
-        """self.image.save("padded.png")
-        self.image.show()"""
+
 
     
     def pad_black_pixels(self, grey_value = 180, padding_size = 1):

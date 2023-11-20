@@ -306,7 +306,7 @@ class IQL :
         self.env.reset_env()
 
         animation = FuncAnimation(self.fig, self.update_agents, frames = max_mov, interval = 100)
-        animation.save("animation4.gif", writer='pillow', fps=10)
+        animation.save("animation.gif", writer='pillow', fps=10)
         plt.show()
 
 
