@@ -17,7 +17,7 @@ class Environment :
         # the number of agents in the env
         self.num_agents = num_agents 
         
-        # the size of the game env
+        # the size of the game env 
         self.grid_length, self.grid_width = grid_length, grid_width
 
         # list of the env agents
